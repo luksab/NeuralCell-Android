@@ -16,31 +16,54 @@ import java.io.IOException;
 
 public class NeuralCell extends PApplet {
 
-    float speed = 0.003f, weightToRadius = 0.007f, scaling, lostWeight = 0;
+    float speed = 0.003f, weightToRadius = 0.007f, scaling, lostWeight = 0, cDir, cSpeed;
     public int p = 1;
-    ArrayList<Cell> Cells = new ArrayList<Cell>();
+    public ArrayList<Cell> Cells = new ArrayList<Cell>();
+    public boolean algoCells = true, cannibalism = true;
 
     public void setup() {
         scaling = (2 * height);
         background(0);
-        Cells.add(new ControlledCell(10));
-        Cells.add(new AlgCell(5));
-        float gesMass = 95;
-        for (int i = 0; i < 100; i++) {
-            float cell = random(1, 10);
-            Cells.add(new AiCell(gesMass / cell));
-            gesMass = gesMass / cell;
+        if (Cells.isEmpty()) {
+            Cells.add(new ControlledCell(10));
+            if (algoCells)
+                Cells.add(new AlgCell(5));
+            float gesMass = 95;
+            for (int i = 0; i < 100; i++) {
+                float cell = random(1, 10);
+                Cells.add(new AiCell(gesMass / cell));
+                gesMass = gesMass / cell;
+            }
+            Cells.add(new AiCell(gesMass));
         }
-        Cells.add(new AiCell(gesMass));
     }
 
-    public void set(int ea){
-        p = ea;
+    public void newAlCell() {
+        Cells.add(new AlgCell(5));
+        lostWeight -= 5;
     }
 
     public void draw() {
         background(0);
         stroke(255);
+        if (!algoCells) {
+            for (int i = 0; i < Cells.size(); i++) {
+                Cell d = Cells.get(i);
+                if (d.getClass() == AlgCell.class) {
+                    lostWeight += d.w;
+                    d.del = true;
+                }
+            }
+        }
+        for (int i = 0; i < Cells.size(); i++) {
+            Cell d = Cells.get(i);
+            if (d.getClass() == ControlledCell.class) {
+                ControlledCell c = (ControlledCell) d;
+                c.d = cDir;
+                c.s = cSpeed;
+            }
+        }
+
         for (int k = 0; k < p; k++) {
             if (lostWeight > 5) {
                 for (int i = 0; i < lostWeight; i++) {
@@ -84,16 +107,15 @@ public class NeuralCell extends PApplet {
                     }
                 }
         }
-        for (Cell d : Cells) {
+        for (int i = 0; i < Cells.size(); i++) {
+            Cell d = Cells.get(i);
             d.draw();
         }
     }
 
-    public void mouseReleased() {
-        if (mouseX > height) {
-            Cells.add(new ControlledCell(5));
-            lostWeight -= 5;
-        }
+    public void spawnControlled() {
+        Cells.add(new ControlledCell(5));
+        lostWeight -= 5;
     }
 
     public class AiCell extends Cell {
@@ -218,6 +240,51 @@ public class NeuralCell extends PApplet {
             s = 1;
         }
 
+        public float[] findNNearest(int n) {
+            Cell[] nearCells = new Cell[n];
+            for (int k = 0; k < Cells.size(); k++) {
+                Cell c = Cells.get(k);
+                if (cannibalism || !(c.getClass() == AlgCell.class))
+                    if (c != this) {
+                        for (int i = 0; i < n; i++) {
+                            if (nearCells[i] == null) {
+                                nearCells[i] = c;
+                            } else if (distance(c) < distance(nearCells[i])) {
+                                Cell p = nearCells[i];
+                                nearCells[i] = c;
+                                for (int j = i + 1; j < n; j++) {
+                                    if (nearCells[j] == null) {
+                                        break;
+                                    }
+                                    if (distance(p) < distance(nearCells[j])) {
+                                        Cell f = p;
+                                        p = nearCells[j];
+                                        nearCells[j] = f;
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                    }
+            }
+            float[] result = new float[3 * n];
+            for (int i = 0; i < n; i++) {
+                if (nearCells[i] != null) {
+                    result[3 * i] = nearCells[i].w;
+                    result[3 * i + 1] = atan((nearCells[i].y - y) / (nearCells[i].x - x));
+                    if (nearCells[i].x < x) {
+                        result[3 * i + 1] += PI;
+                    }
+                    if (result[3 * i + 1] < 0) {
+                        result[3 * i + 1] += TAU;
+                    }
+                    result[3 * i + 2] = (float) (distance(nearCells[i]));
+                }
+            }
+            return result;
+
+        }
+
         public void updaten() {
             if (w > 10) split = true;
             else split = false;
@@ -331,6 +398,10 @@ public class NeuralCell extends PApplet {
             l = 0.001f;
         }
 
+        public String toString() {
+            return "[" + "" + "]";
+        }
+
         public void update() {
             a++;
             if (random(1) > 5000 / a) {
@@ -366,7 +437,8 @@ public class NeuralCell extends PApplet {
 
         public float[] findNNearest(int n) {
             Cell[] nearCells = new Cell[n];
-            for (Cell c : Cells) {
+            for (int k = 0; k < Cells.size(); k++) {
+                Cell c = Cells.get(k);
                 if (c != this) {
                     for (int i = 0; i < n; i++) {
                         if (nearCells[i] == null) {
@@ -417,7 +489,7 @@ public class NeuralCell extends PApplet {
     }
 
     private class ControlledCell extends Cell {
-        float d, s, posX, posY;
+        float d, s;
         boolean p;
 
         ControlledCell(float weight) {
@@ -427,7 +499,7 @@ public class NeuralCell extends PApplet {
         }
 
         public void updaten() {
-            a = 0;
+            /*a = 0;
             d = atan((((float) (mouseY) / height) - y) / (((float) (mouseX) / height) - x));
             if (((float) (mouseX) / height) < x) {
                 d += PI;
@@ -448,7 +520,11 @@ public class NeuralCell extends PApplet {
                     d = (3 * PI) - d;
 
             if (y >= 1 || y <= 0)
-                d = TAU - d;
+                d = TAU - d;*/
+            d = cDir;
+            s = cSpeed;
+            x += speed * s * cos(d);
+            y -= speed * s * sin(d);
         }
 
         public void draw() {

@@ -2,7 +2,9 @@ package de.luksab.neuralCell;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -10,6 +12,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.FrameLayout;
 import android.view.ViewGroup.LayoutParams;
 import android.app.FragmentTransaction;
@@ -18,13 +23,19 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.Manifest;
 import android.widget.SeekBar;
+import android.widget.Switch;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+import io.github.controlwear.virtual.joystick.android.JoystickView;
 import processing.core.PApplet;
 
 import static android.R.attr.id;
@@ -34,41 +45,7 @@ public class MainActivity extends Activity {
     private static final String MAIN_FRAGMENT_TAG = "main_fragment";
     private static final int REQUEST_PERMISSIONS = 1;
     int viewId = 0x1000;
-
-
-
-/*    public class AndroidSeekBar extends Activity {
-        /** Called when the activity is first created. */
-/*        @Override
-        public void onCreate(Bundle savedInstanceState)
-       super.onCreate(savedInstanceState);
-        setContentView(R.layout.main);
-
-        SeekBar seekBar = (SeekBar)findViewById(R.id.seekbar);
-        final TextView seekBarValue = (TextView)findViewById(R.id.seekbarvalue);
-
-       seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
-
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress,
-            boolean fromUser) {
-                // TODO Auto-generated method stub
-                seekBarValue.setText(String.valueOf(progress));
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-                // TODO Auto-generated method stub
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                // TODO Auto-generated method stub
-            }
-        });
-    }
-}*/
-
+    //SharedPreferences mPrefs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,21 +54,14 @@ public class MainActivity extends Activity {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         window.setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN, WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN);
         window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        //FrameLayout frame = new FrameLayout(this);
-        //frame.setId(viewId);
         DisplayMetrics metrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(metrics);
         int height = metrics.heightPixels;
         int width = metrics.widthPixels;
-        //if(width > height)
-        //setContentView(frame, new LayoutParams(height, height));
-        //else
-        //    setContentView(frame, new LayoutParams(width, width));
-        //frame.setId(viewId);
         setContentView(R.layout.main);
         LayoutInflater inflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         View view = inflater.inflate(R.layout.main, null);
-        FrameLayout frame = (FrameLayout) view.findViewById(R.id.frame);
+        final quadraticLayout frame = (quadraticLayout) view.findViewById(R.id.frame);
 
         if (width > height)
             frame.setLayoutParams(new LayoutParams(height, height));
@@ -133,6 +103,47 @@ public class MainActivity extends Activity {
                 // TODO Auto-generated method stub
             }
         });
+
+        Switch algoCells = (Switch) findViewById(R.id.algoCells);
+        algoCells.setChecked(true);
+        algoCells.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                fragment.algoCells = isChecked;
+                if (isChecked)
+                    fragment.newAlCell();
+            }
+        });
+
+        Button ccell = (Button) findViewById(R.id.ccell);
+        ccell.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                fragment.spawnControlled();
+            }
+        });
+
+        CheckBox checkBox = (CheckBox) findViewById(R.id.checkBox);
+        checkBox.setChecked(true);
+        checkBox.setOnCheckedChangeListener(
+                new CompoundButton.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                        fragment.cannibalism = isChecked;
+                    }
+                }
+        );
+
+        JoystickView joystick = (JoystickView) findViewById(R.id.joystick);
+        joystick.setOnMoveListener(new JoystickView.OnMoveListener() {
+            @Override
+            public void onMove(int angle, int strength) {
+                fragment.cDir = (float)(((double)(angle)/360)*Math.PI*2);
+                fragment.cSpeed = (float)(strength)/100;
+            }
+        });
+
+        //mPrefs = getPreferences(MODE_PRIVATE);
     }
 
     @Override
@@ -142,8 +153,26 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    public void onStop() {
+        super.onStop();
+        /*SharedPreferences.Editor prefsEditor = mPrefs.edit();
+        Gson gson = new Gson();
+        String json = gson.toJson(fragment.Cells);
+        prefsEditor.putString("Cells", json);
+        prefsEditor.commit();//TODO try out apply*/
+    }
+
+    @Override
     public void onStart() {
         super.onStart();
+        /*Gson gson = new Gson();
+        String json = mPrefs.getString("Cells", "");
+        Log.v("info",json);
+        ArrayList<NeuralCell.Cell> arr = gson.fromJson(json, new TypeToken<List<NeuralCell.Cell>>(){}.getType());
+        if (!arr.isEmpty())
+            fragment.Cells = arr;*/
+
+        /*
         ArrayList<String> needed = new ArrayList<String>();
         int check;
         boolean danger = false;
@@ -151,7 +180,7 @@ public class MainActivity extends Activity {
             ActivityCompat.requestPermissions(this, needed.toArray(new String[needed.size()]), REQUEST_PERMISSIONS);
         } else if (danger) {
             fragment.onPermissionsGranted();
-        }
+        }*/
     }
 
     @Override

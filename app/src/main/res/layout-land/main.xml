@@ -1,10 +1,3 @@
-<!--<fragment xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/fragment"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:name="processing.core.PApplet" /> -->
-
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -21,7 +14,7 @@
     <LinearLayout
         android:layout_width="fill_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/frame"
+        android:layout_toEndOf="@id/frame"
         android:weightSum="2"
         android:orientation="horizontal">
 
@@ -109,8 +102,3 @@
     </LinearLayout>
 
 </RelativeLayout>
-
-
-
-
-

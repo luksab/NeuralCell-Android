@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="speed">Speed</string>
+    <string name="algorithmic_cells">Algorithmic Cells</string>
+    <string name="new_controlled_cell">new controlled Cell</string>
+    <string name="algorithm_cannibalism">Algorithm Cannibalism</string>
+</resources>
